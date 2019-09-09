@@ -1,9 +1,12 @@
 ## Virtual Hosts
+
+FORKED FROM: https://github.com/x-falcon/Virtual-Hosts
+
+Added DNS Over HTTPS to Cloudflare, i think it slow, but usable
+
 hosts for android,implement by vpn mode,supports wildcard DNS records
 
-<a href="https://play.google.com/store/apps/details?id=com.github.xfalcon.vhosts"><img src="https://play.google.com/intl/en_us/badges/images/generic/en-play-badge.png" height="48" /></a>
-
-Video Demo: <a target="_blank" href="https://www.youtube.com/watch?v=pHnsboAnm-A">https://www.youtube.com/watch?v=pHnsboAnm-A</a>
+get your HOSTS file from this repo https://github.com/StevenBlack/hosts
 
 Virtual Hosts  app helping developers customized  hosts(/system/etc/hosts) File on android devices(no root).
 

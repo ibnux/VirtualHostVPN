@@ -18,7 +18,12 @@
 
 package com.github.xfalcon.vhosts;
 
-import android.content.*;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
@@ -27,6 +32,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
+
 import com.baidu.mobstat.StatService;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.xfalcon.vhosts.util.LogUtils;
@@ -46,6 +52,7 @@ public class VhostsActivity extends AppCompatActivity {
     public static final String HOSTS_URI = "HOST_URI";
     public static final String NET_HOST_FILE = "net_hosts";
 
+    public static VhostsActivity me;
 
     private boolean waitingForVPNStart;
 
@@ -62,6 +69,7 @@ public class VhostsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        me = this;
         launch();
         StatService.autoTrace(this, true, false);
         setContentView(R.layout.activity_vhosts);

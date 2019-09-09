@@ -18,8 +18,22 @@
 
 package com.github.xfalcon.vhosts.vservice;
 
+import android.util.Log;
+
+import com.github.xfalcon.vhosts.Aplikasi;
 import com.github.xfalcon.vhosts.util.LogUtils;
-import org.xbill.DNS.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.koushikdutta.ion.Ion;
+
+import org.xbill.DNS.AAAARecord;
+import org.xbill.DNS.ARecord;
+import org.xbill.DNS.Address;
+import org.xbill.DNS.Flags;
+import org.xbill.DNS.Message;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.Record;
+import org.xbill.DNS.Type;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -67,12 +81,12 @@ public class DnsChange {
                 while (true) {
                     int i = query_string.indexOf(".", j);
                     if (i == -1) {
-                        return null;
+                        return queryDNS(query_string,message,question,query_domain,packet_buffer,packet);
                     }
                     String str = query_string.substring(i);
 
                     if (".".equals(str) || "".equals(str)) {
-                        return null;
+                        return queryDNS(query_string,message,question,query_domain,packet_buffer,packet);
                     }
                     if (DOMAINS_IP_MAPS.containsKey(str)) {
                         query_string = str;
@@ -101,6 +115,59 @@ public class DnsChange {
             return null;
         }
 
+    }
+
+    public static ByteBuffer queryDNS(String host, Message message, Record question,Name query_domain,ByteBuffer packet_buffer,Packet packet){
+        LogUtils.d(TAG, "queryCloudflareDNS: "+ host);
+        String ipnya = "";
+        try {
+            if(host.startsWith(".")){
+                host = host.substring(1);
+            }
+            if(host.endsWith(".")){
+                host = host.substring(0,host.length()-1);
+            }
+            LogUtils.d(TAG, "queryCloudflareDNS: "+ host);
+            int type = question.getType();
+            JsonObject json = Ion.with(Aplikasi.me)
+                    .load("GET", "https://cloudflare-dns.com/dns-query?name=" + host + "&type=A")
+                    .setLogging(TAG, Log.DEBUG)
+                    .addHeader("Accept"," application/dns-json")
+                    .setHeader("Accept","application/dns-json")
+                    .asJsonObject().get();
+            Log.d(TAG,json.toString());
+            JsonArray answer = json.get("Answer").getAsJsonArray();
+            int jml = answer.size();
+            if(jml>0){
+                for(int n=0;n<jml;n++) {
+                    JsonObject dnss = answer.get(n).getAsJsonObject();
+                    if(dnss.get("type").getAsInt()==1) {
+                        ipnya = dnss.get("data").getAsString();
+                        break;
+                    }
+                }
+                InetAddress address = Address.getByAddress(ipnya);
+                Record record;
+                if (type == Type.A) record = new ARecord(query_domain, 1, 86400, address);
+                else record = new AAAARecord(query_domain, 1, 86400, address);
+                message.addRecord(record, 1);
+                message.getHeader().setFlag(Flags.QR);
+                packet_buffer.limit(packet_buffer.capacity());
+                packet_buffer.put(message.toWire());
+                packet_buffer.limit(packet_buffer.position());
+                packet_buffer.reset();
+                packet.swapSourceAndDestination();
+                packet.updateUDPBuffer(packet_buffer, packet_buffer.remaining());
+                packet_buffer.position(packet_buffer.limit());
+                LogUtils.d(TAG, "queryCloudflareDNS: " + question.getType() + " :" + query_domain.toString() + " : " + address.getHostName());
+                return packet_buffer;
+            }
+        }catch (Exception e){
+            LogUtils.d(TAG, "queryCloudflareDNS Error: " + e.getMessage() + " : " + host+" | "+ipnya );
+        }
+
+        LogUtils.d(TAG, "queryCloudflareDNS: "+ host+" Not Found");
+        return null;
     }
 
     public static int handle_hosts(InputStream inputStream) {
