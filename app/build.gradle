@@ -4,11 +4,11 @@ android {
     compileSdkVersion 28
     buildToolsVersion "28.0.3"
     defaultConfig {
-        applicationId "com.github.xfalcon.vhosts"
+        applicationId "com.github.xfalcon.nux.vhosts"
         minSdkVersion 19
         targetSdkVersion 28
         versionCode 34
-        versionName "2.0.5"
+        versionName "2.1.5"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
