@@ -29,12 +29,18 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.support.v4.content.LocalBroadcastManager;
+
 import com.github.xfalcon.vhosts.NetworkReceiver;
 import com.github.xfalcon.vhosts.R;
 import com.github.xfalcon.vhosts.VhostsActivity;
 import com.github.xfalcon.vhosts.util.LogUtils;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
@@ -50,7 +56,7 @@ public class VhostsService extends VpnService {
     private static final String VPN_ADDRESS6 = "fe80:49b1:7e4f:def2:e91f:95bf:fbb6:1111";
     private static final String VPN_ROUTE = "0.0.0.0"; // Intercept everything
     private static final String VPN_ROUTE6 = "::"; // Intercept everything
-    private static String VPN_DNS4 = "8.8.8.8";
+    private static String VPN_DNS4 = "1.1.1.1";
     private static String VPN_DNS6 = "2001:4860:4860::8888";
 
     public static final String BROADCAST_VPN_STATE = VhostsService.class.getName() + ".VPN_STATE";

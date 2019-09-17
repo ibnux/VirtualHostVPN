@@ -23,10 +23,9 @@ import android.util.Patterns;
 
 import com.github.xfalcon.vhosts.Aplikasi;
 import com.github.xfalcon.vhosts.util.LogUtils;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.koushikdutta.ion.Ion;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.xbill.DNS.AAAARecord;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.Address;
@@ -44,11 +43,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 public class DnsChange {
 
@@ -132,8 +134,6 @@ public class DnsChange {
             if(host.endsWith(".")){
                 host = host.substring(0,host.length()-1);
             }
-            //Dont query himself
-            if(host.contains("cloudflare-dns")) return null;
             if(!Patterns.WEB_URL.matcher(host).matches()){
                 LogUtils.d(TAG, host+" NOT VALID");
                 return processDNS("0.0.0.0",message,question,query_domain,packet_buffer,packet);
@@ -161,20 +161,15 @@ public class DnsChange {
 
             }else {
                 LogUtils.d(TAG, "queryCloudflareDNS: " + host);
-                JsonObject json = Ion.with(Aplikasi.me)
-                        .load("GET", "https://cloudflare-dns.com/dns-query?name=" + host + "&type=A")
-                        .setLogging(TAG, Log.DEBUG)
-                        .addHeader("Accept", " application/dns-json")
-                        .setHeader("Accept", "application/dns-json")
-                        .asJsonObject().get();
-                Log.d(TAG, json.toString());
-                JsonArray answer = json.get("Answer").getAsJsonArray();
-                int jml = answer.size();
+
+                JSONArray answer = getCloudflare("https://1.1.1.1/dns-query?name=" + host + "&type=A");
+                Log.d(TAG, answer.toString());
+                int jml = answer.length();
                 if (jml > 0) {
                     for (int n = 0; n < jml; n++) {
-                        JsonObject dnss = answer.get(n).getAsJsonObject();
-                        if (dnss.get("type").getAsInt() == 1) {
-                            ipnya = dnss.get("data").getAsString();
+                        JSONObject dnss = answer.getJSONObject(n);
+                        if (dnss.getInt("type") == 1) {
+                            ipnya = dnss.getString("data");
                             break;
                         }
                     }
@@ -219,6 +214,44 @@ public class DnsChange {
             return packet_buffer;
         }catch (Exception e){
             LogUtils.d(TAG, "queryCloudflareDNS Error: " + e.getMessage() + " :  | "+ipAdd );
+        }
+        return null;
+    }
+
+
+    private static JSONArray getCloudflare(String target){
+        LogUtils.d(TAG, "getCloudflare: " + target);
+        HttpURLConnection connection = null;
+        BufferedReader bufferedReader = null;
+        try{
+            URL url = new URL(target);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/dns-json");
+            connection.connect();
+            InputStream inputStream = connection.getInputStream();
+            bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            StringBuffer stringBuffer = new StringBuffer();
+
+            String line ="";
+            while((line= bufferedReader.readLine())!=null){
+                stringBuffer.append(line);
+            }
+
+            LogUtils.d(TAG, "getCloudflare: " + stringBuffer.toString());
+            return new JSONObject(stringBuffer.toString()).getJSONArray("Answer");
+        }catch(IOException e) {
+            e.printStackTrace();
+        }catch (Exception e){
+
+        }finally{
+            connection.disconnect();
+
+            try{
+                bufferedReader.close();
+            }catch (IOException e){
+                e.printStackTrace();
+            }
         }
         return null;
     }

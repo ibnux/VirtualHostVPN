@@ -18,6 +18,7 @@
 
 package com.github.xfalcon.vhosts;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -37,6 +38,8 @@ import com.baidu.mobstat.StatService;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.xfalcon.vhosts.util.LogUtils;
 import com.github.xfalcon.vhosts.vservice.VhostsService;
+import com.nabinbhandari.android.permissions.PermissionHandler;
+import com.nabinbhandari.android.permissions.Permissions;
 import com.suke.widget.SwitchButton;
 
 import java.lang.reflect.Field;
@@ -128,6 +131,16 @@ public class VhostsActivity extends AppCompatActivity {
 
         LocalBroadcastManager.getInstance(this).registerReceiver(vpnStateReceiver,
                 new IntentFilter(VhostsService.BROADCAST_VPN_STATE));
+
+        String[] permissions = {Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.RECEIVE_BOOT_COMPLETED
+        };
+        Permissions.check(this/*context*/, permissions, null/*rationale*/, null/*options*/, new PermissionHandler() {
+            @Override
+            public void onGranted() {
+            }
+        });
     }
 
     private void launch() {
