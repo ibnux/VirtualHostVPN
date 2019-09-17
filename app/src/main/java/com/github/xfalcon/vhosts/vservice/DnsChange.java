@@ -19,6 +19,7 @@
 package com.github.xfalcon.vhosts.vservice;
 
 import android.util.Log;
+import android.util.Patterns;
 
 import com.github.xfalcon.vhosts.Aplikasi;
 import com.github.xfalcon.vhosts.util.LogUtils;
@@ -36,6 +37,10 @@ import org.xbill.DNS.Record;
 import org.xbill.DNS.Type;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -127,26 +132,12 @@ public class DnsChange {
             if(host.endsWith(".")){
                 host = host.substring(0,host.length()-1);
             }
-            LogUtils.d(TAG, "queryCloudflareDNS: "+ host);
-            int type = question.getType();
-            JsonObject json = Ion.with(Aplikasi.me)
-                    .load("GET", "https://cloudflare-dns.com/dns-query?name=" + host + "&type=A")
-                    .setLogging(TAG, Log.DEBUG)
-                    .addHeader("Accept"," application/dns-json")
-                    .setHeader("Accept","application/dns-json")
-                    .asJsonObject().get();
-            Log.d(TAG,json.toString());
-            JsonArray answer = json.get("Answer").getAsJsonArray();
-            int jml = answer.size();
-            if(jml>0){
-                for(int n=0;n<jml;n++) {
-                    JsonObject dnss = answer.get(n).getAsJsonObject();
-                    if(dnss.get("type").getAsInt()==1) {
-                        ipnya = dnss.get("data").getAsString();
-                        break;
-                    }
-                }
-                InetAddress address = Address.getByAddress(ipnya);
+            //Dont query himself
+            if(host.contains("cloudflare-dns")) return null;
+            if(!Patterns.WEB_URL.matcher(host).matches()){
+                LogUtils.d(TAG, host+" NOT VALID");
+                InetAddress address = Address.getByAddress("0.0.0.0");
+                int type = question.getType();
                 Record record;
                 if (type == Type.A) record = new ARecord(query_domain, 1, 86400, address);
                 else record = new AAAARecord(query_domain, 1, 86400, address);
@@ -159,8 +150,89 @@ public class DnsChange {
                 packet.swapSourceAndDestination();
                 packet.updateUDPBuffer(packet_buffer, packet_buffer.remaining());
                 packet_buffer.position(packet_buffer.limit());
-                LogUtils.d(TAG, "queryCloudflareDNS: " + question.getType() + " :" + query_domain.toString() + " : " + address.getHostName());
+                LogUtils.d(TAG, "queryFor invalid: " + question.getType() + " :" + query_domain.toString() + " : " + address.getHostName());
                 return packet_buffer;
+            }
+            File file = new File(Aplikasi.me.getCacheDir(),"dns");
+            if(!file.exists()) file.mkdir();
+            file = new File(file,host);
+            if(file.exists() && System.currentTimeMillis()-file.lastModified()<21600000L){
+                LogUtils.d(TAG, host+" from cache");
+                StringBuilder text = new StringBuilder();
+                try {
+                    BufferedReader br = new BufferedReader(new FileReader(file));
+                    String line;
+
+                    while ((line = br.readLine()) != null) {
+                        text.append(line);
+                        text.append('\n');
+                    }
+                    br.close();
+                    InetAddress address = Address.getByAddress(text.toString().trim());
+                    int type = question.getType();
+                    Record record;
+                    if (type == Type.A) record = new ARecord(query_domain, 1, 86400, address);
+                    else record = new AAAARecord(query_domain, 1, 86400, address);
+                    message.addRecord(record, 1);
+                    message.getHeader().setFlag(Flags.QR);
+                    packet_buffer.limit(packet_buffer.capacity());
+                    packet_buffer.put(message.toWire());
+                    packet_buffer.limit(packet_buffer.position());
+                    packet_buffer.reset();
+                    packet.swapSourceAndDestination();
+                    packet.updateUDPBuffer(packet_buffer, packet_buffer.remaining());
+                    packet_buffer.position(packet_buffer.limit());
+                    LogUtils.d(TAG, "queryFromCache: " + question.getType() + " :" + query_domain.toString() + " : " + address.getHostName());
+                    return packet_buffer;
+                }
+                catch (Exception e) {
+                    LogUtils.d(TAG, "cache error : "+e.getMessage());
+                }
+
+            }else {
+                LogUtils.d(TAG, "queryCloudflareDNS: " + host);
+                int type = question.getType();
+                JsonObject json = Ion.with(Aplikasi.me)
+                        .load("GET", "https://cloudflare-dns.com/dns-query?name=" + host + "&type=A")
+                        .setLogging(TAG, Log.DEBUG)
+                        .addHeader("Accept", " application/dns-json")
+                        .setHeader("Accept", "application/dns-json")
+                        .asJsonObject().get();
+                Log.d(TAG, json.toString());
+                JsonArray answer = json.get("Answer").getAsJsonArray();
+                int jml = answer.size();
+                if (jml > 0) {
+                    for (int n = 0; n < jml; n++) {
+                        JsonObject dnss = answer.get(n).getAsJsonObject();
+                        if (dnss.get("type").getAsInt() == 1) {
+                            ipnya = dnss.get("data").getAsString();
+                            break;
+                        }
+                    }
+                    InetAddress address = Address.getByAddress(ipnya);
+                    Record record;
+                    if (type == Type.A) record = new ARecord(query_domain, 1, 86400, address);
+                    else record = new AAAARecord(query_domain, 1, 86400, address);
+                    message.addRecord(record, 1);
+                    message.getHeader().setFlag(Flags.QR);
+                    packet_buffer.limit(packet_buffer.capacity());
+                    packet_buffer.put(message.toWire());
+                    packet_buffer.limit(packet_buffer.position());
+                    packet_buffer.reset();
+                    packet.swapSourceAndDestination();
+                    packet.updateUDPBuffer(packet_buffer, packet_buffer.remaining());
+                    packet_buffer.position(packet_buffer.limit());
+                    LogUtils.d(TAG, "queryCloudflareDNS: " + question.getType() + " :" + query_domain.toString() + " : " + address.getHostName());
+                    try {
+                        BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+                        bw.write(ipnya);
+                        bw.close();
+                    }
+                    catch (IOException e) {
+                        Log.e("Exception", "File write failed: " + e.toString());
+                    }
+                    return packet_buffer;
+                }
             }
         }catch (Exception e){
             LogUtils.d(TAG, "queryCloudflareDNS Error: " + e.getMessage() + " : " + host+" | "+ipnya );

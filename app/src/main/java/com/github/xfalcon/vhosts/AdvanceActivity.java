@@ -10,7 +10,14 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.*;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ProgressBar;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Toast;
+
 import com.github.xfalcon.vhosts.util.FileUtils;
 import com.github.xfalcon.vhosts.util.HttpUtils;
 import com.github.xfalcon.vhosts.util.LogUtils;
@@ -39,7 +46,7 @@ public class AdvanceActivity extends AppCompatActivity {
         final ImageButton down_button = findViewById(R.id.down_button);
         final ProgressBar progressBar = findViewById(R.id.progressBar);
         SharedPreferences settings = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        url_edit_text.setText(settings.getString(VhostsActivity.HOSTS_URL,"https://raw.githubusercontent.com/x-falcon/tools/master/hosts"));
+        url_edit_text.setText(settings.getString(VhostsActivity.HOSTS_URL,"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"));
         url_edit_text.setSelection(4);
         boolean isLocal = settings.getBoolean(IS_LOCAL, true);
         if (isLocal) local_radio_button.setChecked(true);

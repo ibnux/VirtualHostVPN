@@ -66,13 +66,5 @@
                 android:src="@drawable/startup"
                 app:fab_label="@string/fab_label_boot"/>
 
-        <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/fab_donation"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:src="@drawable/approve"
-                app:fab_colorNormal="@color/fab_yellowNormal"
-                app:fab_colorPressed="@color/fb_yellowPressed"
-                app:fab_label="@string/fab_label_donation"/>
     </com.github.clans.fab.FloatingActionMenu>
 </android.support.constraint.ConstraintLayout>
